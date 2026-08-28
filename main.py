@@ -81,3 +81,84 @@ def crear_usuario(nombre: str, apellidos: str, telefono: str, edad: int, rol_id:
     rol_existente = any(r["id"] == rol_id for r in roles)
     if not rol_existente:
         raise HTTPException(status_code=400, detail="Error de llave Foránea: El rol_id no existe en la tabla roles.")
+    nuevo_id=len(usuarios) + 1
+    nuevo_usuario ={
+        "id": nuevo_id,
+        "nombre": nombre,
+        "apellido": apellido,
+        "telefono": telefono,
+        "edad": edad,
+        "rol_id": rol_id
+    }
+    usuarios.append(nuevo_usuario)
+    return nuevo_usuario
+
+# --- ENDPOINTS TABLA: PROGRAMAS ---
+@app.get("/programas")
+def listar_programas():
+    return programas
+
+@app.post("/programas")
+def crear_programa(nombre: str, codigo: str):
+    nuevo_id = len(programas) + 1
+    nuevo_prog = {"id": nuevo_id, "nombre": nombre, "codigo": codigo}
+    programas.append(nuevo_prog)
+    return nuevo_prog
+
+# --- ENDPOINTS TABLA: MATRICULAS (Valida FKs usuario_id y programa_id) ---
+@app.get("/matriculas")
+def listar_matriculas():
+    resultado = []
+    for m in matriculas:
+        usr = next((u for u in usuarios if u["id"] == m["usuario_id"]), None)
+        prog = next((p for p in programas if p["id"] == m["programa_id"]), None)
+        resultado.append({
+            "id": m["id"],
+            "fecha_matricula": m["fecha_matricula"],
+            "usuario": usr,
+            "programa": prog
+        })
+    return resultado
+
+@app.post("/matriculas")
+def crear_matricula(usuario_id: int, programa_id: int, fecha_matricula: str):
+    # Validar integridad referencial de ambas llaves foráneas
+    usr_existente = any(u["id"] == usuario_id for u in usuarios)
+    prog_existente = any(p["id"] == programa_id for p in programas)
+    
+    if not usr_existente:
+        raise HTTPException(status_code=400, detail="FK Error: El usuario_id no existe.")
+    if not prog_existente:
+        raise HTTPException(status_code=400, detail="FK Error: El programa_id no existe.")
+        
+    nuevo_id = len(matriculas) + 1
+    nueva_mat = {
+        "id": nuevo_id,
+        "usuario_id": usuario_id,
+        "programa_id": programa_id,
+        "fecha_matricula": fecha_matricula
+    }
+    matriculas.append(nueva_mat)
+    return nueva_mat
+
+# --- ENDPOINTS TABLA: ASISTENCIAS (Valida FK matricula_id) ---
+@app.get("/asistencias")
+def listar_asistencias():
+    return asistencias
+
+@app.post("/asistencias")
+def registrar_asistencia(matricula_id: int, fecha: str, estado: str):
+    # Validar que exista la matrícula correspondiente
+    mat_existente = any(m["id"] == matricula_id for m in matriculas)
+    if not mat_existente:
+        raise HTTPException(status_code=400, detail="FK Error: La matricula_id no existe.")
+    
+    nuevo_id = len(asistencias) + 1
+    nueva_asistencia = {
+        "id": nuevo_id,
+        "matricula_id": matricula_id,
+        "fecha": fecha,
+        "estado": estado
+    }
+    asistencias.append(nueva_asistencia)
+    return nueva_asistencia
